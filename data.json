@@ -1,0 +1,1 @@
+{"time_window": 60.0, "limit": 30, "num_of_events": 5, "events": [[155931800, 10, "Vlad"], [155931830, 10, "Vlad"], [155931840, 20, "Vlad"], [155931840, 20, "Vlad_the_Alchemist"], [155931870, 20, "Vlad"]], "users": {"Vlad_the_Alchemist": {"name": "Vlad_the_Alchemist", "events": [], "limitUsed": 0}, "Vlad": {"name": "Vlad", "events": [], "limitUsed": 0}}}

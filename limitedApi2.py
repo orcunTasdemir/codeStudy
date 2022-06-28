@@ -1,65 +1,97 @@
-
-
-from yaml import parse
+from collections import defaultdict
+import json
+from typing import List
 
 
 def parseAPIEventsFile(text_file) -> None:
-    data = []
+    data = defaultdict()
     with open(text_file, "r") as api_txt:
         lines = api_txt.readlines()
         data['time_window'] = float(lines[0])
         data['limit'] = int(lines[1])
-        data['num_of_events'] = int(lines[2]) 
+        data['num_of_events'] = int(lines[2])
         data['events'] = [list(int(x) if x.isdigit() else x for x in lines[line_num].strip(
-            '\n').split(' '))  for line_num in range(3, data['num_of_events'] + 3)]
-        
-    for event in data['events']:
-        data[event[2]] = {'limitLeft': self.limit}
+            '\n').split(' ')) for line_num in range(3, data['num_of_events'] + 3)]
+        users = list(set([event[2] for event in data['events']]))
+        data['users'] = dict()
+        for user in users:
+            data['users'][user] = {'name': user,
+                                   'events': [],  # [event[0:2] for event in data['events'] if event[2] == user],
+                                   'limitUsed': 0}
+        # with open('data.json', 'w+') as f:
+        #     f.write(json.dumps(data))
     return data
 
 
-print(parseAPIEventsFile('apiEvents.txt'))
+data = parseAPIEventsFile('apiEvents.txt')
 
 
-# class Solution:
-    
-#     def __init__(self) -> None:
-#         self.server = dict()
-#         self.parseAPIEventsFile('apiEvents.txt')
-#         self.time_window = self.server['time_window']
-#         self.limit = self.server['limit']
-#         self.events = self.server['events']
-#         self.users = set([[x[2], self.limit] for x in self.server['events']])
-        
-#     def rate_limit(self, event: List ) -> int:
-#         # if the event list is only 3 units long I want to add the first timestamp to it
-#         # to keep track of the window and also start the credit they have
-#         if len(event) == 3:
-#             event.append(event[0])
-#             event.append(self.limit)
-#         # if it is already 4 item check if the timewindow is passed, if  so,  add same credit back again
-        
-#         if(event[0] - event[3] > self.time_window):
-#             event[4] = self.limit
-#         # after these allocations of credit we can check operations 
-#         # if the operations are less than the credit
-#         if event[1] < event[4]:
-#             event[4] -= event[1]
-#             return event[1]
-        
-#         alll = event[4]
-#         event[4] = 0
-#         return alll
-    
-#     def runServer(self):
-#         results = []
-#         for event in self.events:
-#             r = self.rate_limit(event)
-#             results.append(r)
-#         return results
+class Solution:
+
+    def __init__(self, time_window: float, limit: int) -> None:
+
+        self.time_window = data['time_window']
+        self.limit = data['limit']
+
+    def calculateLimitUsed(self, event: List, actualUsed) -> None:
+        user_name = event[2]
+        # append it to the events list
+        data['users'][user_name]['events'].append(
+            event[0:2] + [actualUsed])
+
+        data['users'][user_name]['limitUsed'] = 0
+        if data['users'][user_name]['events']:
+            rev_list = list(reversed(data['users'][user_name]['events']))
+            # print('rev_list: ', rev_list)
+            windowStart = rev_list[0][0] - self.time_window
+            # print('window starts at: ', windowStart)
+            for event in rev_list:
+                if(event[0] > windowStart):
+                    data['users'][user_name]['limitUsed'] += event[2]
+
+    def calculateLimitUsed2(self, event: List):
+        user = event[2]
+        data['users'][user]['limitUsed'] = 0
+        if data['users'][user]['events']:
+            rev_list = list(reversed(data['users'][user]['events']))
+            # print('rev_list: ', rev_list)
+            windowStart = event[0] - self.time_window
+            # print('window starts at: ', windowStart)
+            for event in rev_list:
+                if(event[0] > windowStart):
+                    data['users'][user]['limitUsed'] += event[2]
+
+    def rate_limit(self, event: List) -> int:
+        self.calculateLimitUsed2(event)
+
+        print(data['users'])
+        # print(data['users'][event[2]]['limitUsed'])
+        limitWanted = event[1]
+        limitUsed = data['users'][event[2]]['limitUsed']
+        # if the limit used is greater than the limit return 0
+        if limitUsed >= self.limit:
+            return 0
+        # if there is limit left, use the limit
+        else:
+            limitLeft = (self.limit - data['users'][event[2]]['limitUsed'])
+            if limitWanted > limitLeft:
+                # data['users'][event[2]]['limitUsed'] = self.limit
+                self.calculateLimitUsed(event, limitLeft)
+                return limitLeft
+            else:
+                # data['users'][event[2]]['limitUsed'] += limitWanted
+                self.calculateLimitUsed(event, limitWanted)
+                return limitWanted
+
+    def runServer(self):
+        results = []
+        for event in data['events']:
+            r = self.rate_limit(event)
+            results.append(r)
+        # print(data)
+        return results
 
 
-# # user_input = input("Give the API events input: ");
-
-# s = Solution()
-# print(s.runServer())
+s = Solution(data['time_window'], data['limit'])
+print(s.runServer())
+# print(s.calculateLimitUsed('Vlad'))
